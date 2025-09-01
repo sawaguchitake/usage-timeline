@@ -79,9 +79,12 @@ func main() {
 		}
 	}
 
-	// 機器ID昇順、同一IDの場合は使用開始日昇順でソート
+	// 機器ID昇順、同一IDの場合は使用開始日昇順、開始日が同じ場合は終了日が早い順でソート
 	sort.Slice(usages, func(i, j int) bool {
 		if usages[i].EquipmentID == usages[j].EquipmentID {
+			if usages[i].BeginDate.Equal(usages[j].BeginDate) {
+				return usages[i].EndDate.Before(usages[j].EndDate)
+			}
 			return usages[i].BeginDate.Before(usages[j].BeginDate)
 		}
 		return usages[i].EquipmentID < usages[j].EquipmentID
