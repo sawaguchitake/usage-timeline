@@ -1,3 +1,3 @@
-module github.com/sawaguchitake/gantt-chart
+module github.com/sawaguchitake/usage-timeline
 
 go 1.24.2
