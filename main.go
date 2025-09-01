@@ -5,7 +5,15 @@ import (
 	"fmt"
 	"os"
 	"sort"
+	"strings"
 	"time"
+)
+
+var (
+	// 色判定用: 土曜=青, 日曜=赤, 他=デフォルト
+	colorReset = "\x1b[0m"
+	colorBlue  = "\x1b[34m"
+	colorRed   = "\x1b[31m"
 )
 
 // 機器使用記録（使用者単位）を表す構造体
@@ -108,24 +116,12 @@ func main() {
 
 	nameCol := "User Name"
 	nameWidth := 10
-	// 色判定用: 土曜=青, 日曜=赤, 他=デフォルト
-	colorReset := "\x1b[0m"
-	colorBlue := "\x1b[34m"
-	colorRed := "\x1b[31m"
 
 	// 日付ラベル
 	fmt.Print(padName(nameCol, nameWidth) + "| ")
 	for i, label := range dateLabels {
 		w := weekLabels[i]
-		var color string
-		switch w {
-		case "Sa":
-			color = colorBlue
-		case "Su":
-			color = colorRed
-		default:
-			color = colorReset
-		}
+		color := getWeekColor(w)
 		fmt.Print(color, label, colorReset, " ")
 	}
 	fmt.Println()
@@ -133,34 +129,24 @@ func main() {
 	// 曜日ラベル行
 	fmt.Print(padName("", nameWidth) + "| ")
 	for _, w := range weekLabels {
-		var color string
-		switch w {
-		case "Sa":
-			color = colorBlue
-		case "Su":
-			color = colorRed
-		default:
-			color = colorReset
-		}
+		color := getWeekColor(w)
 		fmt.Print(color, w, colorReset, " ")
 	}
 	fmt.Println()
 
 	// 各機器の使用記録ガントチャート表示（使用者名単位）
+	prevID := ""
 	for _, u := range usages {
+		if u.EquipmentID != prevID {
+			// 機器IDが変わったらセパレータ行を挿入
+			fmt.Println(strings.Repeat("-", nameWidth) + "+-" + strings.Repeat("---", len(weekLabels)))
+		}
 		fmt.Print(padName(u.UserName, nameWidth) + "| ")
 		idx := 0
 		isEndless := u.EndDate.IsZero()
 		for d := minDate; !d.After(maxDate); d = d.AddDate(0, 0, 1) {
 			w := weekLabels[idx]
-			var color string
-			if w == "Sa" {
-				color = colorBlue
-			} else if w == "Su" {
-				color = colorRed
-			} else {
-				color = colorReset
-			}
+			color := getWeekColor(w)
 			if !d.Before(u.BeginDate) {
 				if isEndless {
 					fmt.Print(color, "??", colorReset, " ")
@@ -175,6 +161,7 @@ func main() {
 			idx++
 		}
 		fmt.Println()
+		prevID = u.EquipmentID
 	}
 }
 
@@ -197,9 +184,7 @@ func padName(name string, width int) string {
 
 // 1桁月・日にも対応した日付パース関数
 func parseDateFlexible(s string) (time.Time, error) {
-	layouts := []string{
-		"2006-1-2", "2006-01-02", "2006/1/2", "2006/01/02",
-	}
+	layouts := []string{"2006-1-2", "2006-01-02", "2006/1/2", "2006/01/02"}
 	var t time.Time
 	var err error
 	for _, layout := range layouts {
@@ -209,4 +194,16 @@ func parseDateFlexible(s string) (time.Time, error) {
 		}
 	}
 	return t, err
+}
+
+// 曜日ラベルに対応する色を返す関数
+func getWeekColor(w string) string {
+	switch w {
+	case "Sa":
+		return colorBlue
+	case "Su":
+		return colorRed
+	default:
+		return colorReset
+	}
 }
