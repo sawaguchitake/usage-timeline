@@ -1,6 +1,4 @@
-
 # 機器使用記録ガントチャート表示プログラム（Go）
-
 
 このリポジトリは、機器の使用記録をCSVファイル（デフォルト: usage.csv）から読み込み、テキストベースのガントチャートとして可視化するGo言語プログラムです。
 
@@ -31,14 +29,11 @@ id,user_name,begin_date,end_date
 3. 以下のコマンドで実行
 
 ```
-go run . [CSVファイル名]
+go run ./cmd/cli [CSVファイル名]
 ```
 ※ CSVファイル名を省略した場合は `usage.csv` を読み込みます
 
 ## サンプル
 ```
-go run . usage.csv
+go run ./cmd/cli usage.csv
 ```
-
-## ライセンス
-MIT License

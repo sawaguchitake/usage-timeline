@@ -1,12 +1,14 @@
 package main
 
 import (
-	"encoding/csv"
 	"fmt"
+	"log"
 	"os"
 	"sort"
 	"strings"
 	"time"
+
+	"github.com/sawaguchitake/usage-timeline/internal/reader"
 )
 
 var (
@@ -16,61 +18,23 @@ var (
 	colorRed   = "\x1b[31m"
 )
 
-// 機器使用記録（使用者単位）を表す構造体
-type UsageRecord struct {
-	EquipmentID string
-	UserName    string
-	BeginDate   time.Time
-	EndDate     time.Time
-}
-
 func main() {
 	csvFile := "usage.csv"
 	if len(os.Args) > 1 {
 		csvFile = os.Args[1]
 	}
-	file, err := os.Open(csvFile)
+	records, err := reader.FromCSV(csvFile)
 	if err != nil {
-		fmt.Println("ファイルを開けません:", err)
-		return
-	}
-	defer file.Close()
-
-	reader := csv.NewReader(file)
-	records, err := reader.ReadAll()
-	if err != nil {
-		fmt.Println("CSV読み込みエラー:", err)
-		return
+		log.Fatalf("process csv: %v", err)
 	}
 
-	var usages []UsageRecord
-	for i, record := range records {
-		if i == 0 {
-			continue // ヘッダー行（id,user_name,begin_date,end_date）をスキップ
-		}
-		begin, err := parseDateFlexible(record[2])
-		var end time.Time
-		var err2 error
-		if record[3] == "" {
-			end = time.Time{} // 空欄の場合はゼロ値（未返却など）
-		} else {
-			end, err2 = parseDateFlexible(record[3])
-			if err != nil || err2 != nil {
-				fmt.Printf("日付パースエラー: %v, %v\n", err, err2)
-				continue
-			}
-		}
-		usages = append(usages, UsageRecord{
-			EquipmentID: record[0],
-			UserName:    record[1],
-			BeginDate:   begin,
-			EndDate:     end,
-		})
+	if len(records) == 0 {
+		log.Fatalf("no records found in CSV file: %s", csvFile)
 	}
 
 	// ガントチャートの期間（全機器の使用期間の最小・最大）を決定
-	minDate, maxDate := usages[0].BeginDate, usages[0].EndDate
-	for _, u := range usages {
+	minDate, maxDate := records[0].BeginDate, records[0].EndDate
+	for _, u := range records {
 		if u.BeginDate.Before(minDate) {
 			minDate = u.BeginDate
 		}
@@ -80,14 +44,14 @@ func main() {
 	}
 
 	// 機器ID昇順、同一IDの場合は使用開始日昇順、開始日が同じ場合は終了日が早い順でソート
-	sort.Slice(usages, func(i, j int) bool {
-		if usages[i].EquipmentID == usages[j].EquipmentID {
-			if usages[i].BeginDate.Equal(usages[j].BeginDate) {
-				return usages[i].EndDate.Before(usages[j].EndDate)
+	sort.Slice(records, func(i, j int) bool {
+		if records[i].EquipmentID == records[j].EquipmentID {
+			if records[i].BeginDate.Equal(records[j].BeginDate) {
+				return records[i].EndDate.Before(records[j].EndDate)
 			}
-			return usages[i].BeginDate.Before(usages[j].BeginDate)
+			return records[i].BeginDate.Before(records[j].BeginDate)
 		}
-		return usages[i].EquipmentID < usages[j].EquipmentID
+		return records[i].EquipmentID < records[j].EquipmentID
 	})
 
 	// 日付ラベル（日のみ）を縦方向に表示
@@ -139,12 +103,12 @@ func main() {
 
 	// 各機器の使用記録ガントチャート表示（使用者名単位）
 	prevID := ""
-	for _, u := range usages {
+	for _, u := range records {
 		if u.EquipmentID != prevID {
 			// 機器IDが変わったらセパレータ行を挿入
 			fmt.Println(strings.Repeat("-", nameWidth) + "+-" + strings.Repeat("---", len(weekLabels)))
 		}
-		fmt.Print(padName(u.UserName, nameWidth) + "| ")
+		fmt.Print(padName(u.User, nameWidth) + "| ")
 		idx := 0
 		isEndless := u.EndDate.IsZero()
 		for d := minDate; !d.After(maxDate); d = d.AddDate(0, 0, 1) {
@@ -180,23 +144,9 @@ func padName(name string, width int) string {
 	}
 	pad := width - w
 	if pad > 0 {
-		return name + fmt.Sprintf(fmt.Sprintf("%%%ds", pad), " ")
+		return name + strings.Repeat(" ", pad)
 	}
 	return name
-}
-
-// 1桁月・日にも対応した日付パース関数
-func parseDateFlexible(s string) (time.Time, error) {
-	layouts := []string{"2006-1-2", "2006-01-02", "2006/1/2", "2006/01/02"}
-	var t time.Time
-	var err error
-	for _, layout := range layouts {
-		t, err = time.Parse(layout, s)
-		if err == nil {
-			return t, nil
-		}
-	}
-	return t, err
 }
 
 // 曜日ラベルに対応する色を返す関数
