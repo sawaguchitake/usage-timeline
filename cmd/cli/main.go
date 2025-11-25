@@ -4,10 +4,8 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"path/filepath"
 	"strings"
 
-	"github.com/sawaguchitake/usage-timeline/internal/reader"
 	"github.com/sawaguchitake/usage-timeline/internal/utils"
 )
 
@@ -24,7 +22,10 @@ func main() {
 		file = os.Args[1]
 	}
 
-	records := readRecord(file)
+	records, err := utils.ReadRecord(file)
+	if err != nil {
+		log.Fatalf("Error: %v", err)
+	}
 
 	utils.SortRecords(records)
 
@@ -80,31 +81,6 @@ func main() {
 		fmt.Println()
 		prevID = u.EquipmentID
 	}
-}
-
-// readRecord は指定されたファイルから使用記録を読み込み、UsageRecordのスライスを返します。
-func readRecord(file string) []reader.UsageRecord {
-	ext := strings.ToLower(filepath.Ext(file))
-	var records []reader.UsageRecord
-	var err error
-
-	switch ext {
-	case ".csv":
-		records, err = reader.FromCSV(file)
-	case ".xlsx":
-		records, err = reader.FromExcel(file)
-	default:
-		log.Fatalf("unsupported file extension: %s", ext)
-	}
-
-	if err != nil {
-		log.Fatalf("process file: %v", err)
-	}
-
-	if len(records) == 0 {
-		log.Fatalf("no records found in file: %s", file)
-	}
-	return records
 }
 
 // 全角文字を考慮して指定幅でパディングする関数
