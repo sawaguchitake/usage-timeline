@@ -4,11 +4,10 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"sort"
 	"strings"
-	"time"
 
 	"github.com/sawaguchitake/usage-timeline/internal/reader"
+	"github.com/sawaguchitake/usage-timeline/internal/utils"
 )
 
 var (
@@ -32,54 +31,10 @@ func main() {
 		log.Fatalf("no records found in CSV file: %s", csvFile)
 	}
 
-	// ガントチャートの期間（全機器の使用期間の最小・最大）を決定
-	minDate, maxDate := records[0].BeginDate, records[0].EndDate
-	for _, u := range records {
-		if u.BeginDate.Before(minDate) {
-			minDate = u.BeginDate
-		}
-		if u.EndDate.After(maxDate) {
-			maxDate = u.EndDate
-		}
-	}
+	utils.SortRecords(records)
 
-	// 機器ID昇順、同一IDの場合は使用開始日昇順、開始日が同じ場合は終了日が早い順でソート
-	sort.Slice(records, func(i, j int) bool {
-		if records[i].EquipmentID == records[j].EquipmentID {
-			if records[i].BeginDate.Equal(records[j].BeginDate) {
-				return records[i].EndDate.Before(records[j].EndDate)
-			}
-			return records[i].BeginDate.Before(records[j].BeginDate)
-		}
-		return records[i].EquipmentID < records[j].EquipmentID
-	})
-
-	// 日付ラベル（日のみ）を縦方向に表示
-	dateLabels := []string{}
-	weekLabels := []string{}
-	for d := minDate; !d.After(maxDate); d = d.AddDate(0, 0, 1) {
-		dateLabels = append(dateLabels, d.Format("02"))
-		// 曜日を2文字（例: Mo, Tu, We, Th, Fr, Sa, Su）で取得
-		w := d.Weekday()
-		var w2 string
-		switch w {
-		case time.Monday:
-			w2 = "Mo"
-		case time.Tuesday:
-			w2 = "Tu"
-		case time.Wednesday:
-			w2 = "We"
-		case time.Thursday:
-			w2 = "Th"
-		case time.Friday:
-			w2 = "Fr"
-		case time.Saturday:
-			w2 = "Sa"
-		case time.Sunday:
-			w2 = "Su"
-		}
-		weekLabels = append(weekLabels, w2)
-	}
+	minDate, maxDate := utils.GetDatePeriod(records)
+	dateLabels, weekLabels := utils.MakeLabels(minDate, maxDate)
 
 	nameCol := "User Name"
 	nameWidth := 10
