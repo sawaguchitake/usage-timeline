@@ -104,36 +104,12 @@ function displayGantt(records) {
 
     const table = document.createElement('table');
 
-    // Header row
-    const headerRow = table.insertRow();
-    const nameCell = headerRow.insertCell();
-    nameCell.textContent = 'User Name';
-    nameCell.style.fontWeight = 'bold';
-    dateLabels.forEach((label, i) => {
-        const cell = headerRow.insertCell();
-        cell.textContent = label;
-        cell.className = 'date-label ' + weekLabels[i].toLowerCase();
-    });
-
-    // Week row
-    const weekRow = table.insertRow();
-    weekRow.insertCell().textContent = '';
-    weekLabels.forEach(w => {
-        const cell = weekRow.insertCell();
-        cell.textContent = w;
-        cell.className = 'week-label ' + w.toLowerCase();
-    });
-
     // Data rows
     let prevID = '';
     records.forEach(record => {
         if (record.EquipmentID !== prevID) {
-            // Separator row
-            const sepRow = table.insertRow();
-            sepRow.className = 'separator';
-            const sepCell = sepRow.insertCell();
-            sepCell.colSpan = dateLabels.length + 1;
-            sepCell.textContent = '---';
+            createHeaderRow(table, dateLabels, weekLabels);
+            createWeekRow(table, weekLabels);
         }
         const row = table.insertRow();
         const userCell = row.insertCell();
@@ -158,4 +134,28 @@ function displayGantt(records) {
     });
 
     gantt.appendChild(table);
+}
+
+// Helper: create header row.
+function createHeaderRow(table, dateLabels, weekLabels) {
+    const row = table.insertRow();
+    const nameCell = row.insertCell();
+    nameCell.textContent = 'User Name';
+    nameCell.style.fontWeight = 'bold';
+    dateLabels.forEach((label, i) => {
+        const cell = row.insertCell();
+        cell.textContent = label;
+        cell.className = 'date-label ' + weekLabels[i].toLowerCase();
+    });
+}
+
+// Helper: create week row.
+function createWeekRow(table, weekLabels) {
+    const row = table.insertRow();
+    row.insertCell().textContent = '';
+    weekLabels.forEach(w => {
+        const cell = row.insertCell();
+        cell.textContent = w;
+        cell.className = 'week-label ' + w.toLowerCase();
+    });
 }
