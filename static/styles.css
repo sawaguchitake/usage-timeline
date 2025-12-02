@@ -1,0 +1,41 @@
+body {
+    font-family: monospace;
+    margin: 20px;
+}
+
+table {
+    border-collapse: collapse;
+    margin-top: 20px;
+}
+
+th, td {
+    border: 1px solid #ddd;
+    padding: 4px;
+    text-align: center;
+    font-size: 12px;
+}
+
+.date-label, .week-label {
+    font-weight: bold;
+}
+
+.sa {
+    color: blue;
+}
+
+.su {
+    color: red;
+}
+
+.usage {
+    background-color: #f0f0f0;
+}
+
+.separator {
+    background-color: #ccc;
+}
+
+.separator td {
+    text-align: center;
+    font-weight: bold;
+}

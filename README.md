@@ -33,7 +33,18 @@ go run ./cmd/cli [CSVファイル名]
 ```
 ※ CSVファイル名を省略した場合は `usage.csv` を読み込みます
 
-## サンプル
+## Web UI
+ブラウザでグラフィカルに表示するHTTPサーバーバージョンです。Docker Composeで運用します。
+
+### 使い方
+1. DockerとDocker Composeをインストール
+2. 以下のコマンドでビルドと実行
+
 ```
-go run ./cmd/cli usage.csv
+docker-compose up --build
 ```
+
+3. ブラウザで http://localhost:8080 にアクセス
+4. "Load Data"ボタンをクリックしてデータを表示
+
+データは `_works` ディレクトリ内のCSV/Excelファイルを読み込みます。

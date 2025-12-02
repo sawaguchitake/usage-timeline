@@ -1,0 +1,7 @@
+services:
+  webui:
+    build: .
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./_works:/root/works
