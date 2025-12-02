@@ -15,6 +15,7 @@ import (
 
 func GetRecordsHandler(w http.ResponseWriter, r *http.Request) {
 	file := r.URL.Query().Get("file")
+	sheet := r.URL.Query().Get("sheet")
 	dir := r.URL.Query().Get("dir")
 	if dir == "" {
 		dir = "./_works" // デフォルト
@@ -25,7 +26,13 @@ func GetRecordsHandler(w http.ResponseWriter, r *http.Request) {
 
 	if file != "" {
 		// 特定のファイルのみ
-		records, err = utils.ReadRecord(filepath.Join(dir, file))
+		path := filepath.Join(dir, file)
+		if strings.ToLower(filepath.Ext(path)) == ".xlsx" && sheet != "" {
+			// シート指定がある場合はオプションで渡す
+			records, err = utils.ReadRecord(path, reader.Options{SheetName: sheet})
+		} else {
+			records, err = utils.ReadRecord(path)
+		}
 		if err != nil {
 			http.Error(w, fmt.Sprintf("Error reading file %s: %v", file, err), http.StatusInternalServerError)
 			return
@@ -43,6 +50,34 @@ func GetRecordsHandler(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(records)
+}
+
+// GetSheetsHandler returns the list of sheets for the specified Excel file.
+// Query params: file (required), dir (optional)
+func GetSheetsHandler(w http.ResponseWriter, r *http.Request) {
+	file := r.URL.Query().Get("file")
+	dir := r.URL.Query().Get("dir")
+	if dir == "" {
+		dir = "./_works"
+	}
+	if file == "" {
+		http.Error(w, "file parameter is required", http.StatusBadRequest)
+		return
+	}
+	path := filepath.Join(dir, file)
+	if strings.ToLower(filepath.Ext(path)) != ".xlsx" {
+		http.Error(w, "sheets are only available for .xlsx files", http.StatusBadRequest)
+		return
+	}
+
+	sheets, err := reader.GetSheetList(path)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Error listing sheets: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string][]string{"sheets": sheets})
 }
 
 func GetFilesHandler(w http.ResponseWriter, r *http.Request) {

@@ -9,16 +9,22 @@ import (
 )
 
 // ReadRecord は指定されたファイルから使用記録を読み込み、UsageRecordのスライスを返します。
-func ReadRecord(file string) ([]reader.UsageRecord, error) {
+// opts はオプションを可変長で受け取ります。渡されなければデフォルトの Options{} を使用します。
+func ReadRecord(file string, opts ...reader.Options) ([]reader.UsageRecord, error) {
+	var options reader.Options
+	if len(opts) > 0 {
+		options = opts[0]
+	}
+
 	ext := strings.ToLower(filepath.Ext(file))
 	var records []reader.UsageRecord
 	var err error
 
 	switch ext {
 	case ".csv":
-		records, err = reader.FromCSV(file)
+		records, err = reader.FromCSV(file, options)
 	case ".xlsx":
-		records, err = reader.FromExcel(file)
+		records, err = reader.FromExcel(file, options)
 	default:
 		return nil, fmt.Errorf("unsupported file extension: %s", ext)
 	}

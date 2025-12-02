@@ -14,7 +14,7 @@ import (
 // 2. そのシートの8行以降でB列に値がある全行を出力。
 // 3. Record構造体のスライスに格納。
 // エラーが発生した場合はエラーを返します。
-func FromExcel(filename string) (records []UsageRecord, err error) {
+func FromExcel(filename string, options Options) ([]UsageRecord, error) {
 	file, err := os.Open(filename)
 	if err != nil {
 		fmt.Println("ファイルを開けません:", err)
@@ -28,7 +28,37 @@ func FromExcel(filename string) (records []UsageRecord, err error) {
 	}
 	defer f.Close()
 
-	// 全シートを取得
+	var sheetName = options.SheetName
+	if sheetName == "" {
+		sheetNames := f.GetSheetList()
+		if len(sheetNames) == 0 {
+			return nil, fmt.Errorf("no sheets in the workbook")
+		}
+
+		// シート名を降順ソートして最初のシートを選択
+		sort.Sort(sort.Reverse(sort.StringSlice(sheetNames)))
+		sheetName = sheetNames[0]
+	}
+
+	return getRecords(sheetName, f)
+}
+
+// GetSheetList は指定されたExcelファイルからシート名のリストを取得し、
+// シート名を降順ソートしたスライスを返します。
+// エラーが発生した場合はエラーを返します。
+func GetSheetList(filename string) ([]string, error) {
+	file, err := os.Open(filename)
+	if err != nil {
+		return nil, fmt.Errorf("open file: %w", err)
+	}
+	defer file.Close()
+
+	f, err := excelize.OpenReader(file)
+	if err != nil {
+		return nil, fmt.Errorf("open excel: %w", err)
+	}
+	defer f.Close()
+
 	sheetNames := f.GetSheetList()
 	if len(sheetNames) == 0 {
 		return nil, fmt.Errorf("no sheets in the workbook")
@@ -36,13 +66,19 @@ func FromExcel(filename string) (records []UsageRecord, err error) {
 
 	// シート名を降順ソート
 	sort.Sort(sort.Reverse(sort.StringSlice(sheetNames)))
-	sheetName := sheetNames[0]
 
+	return sheetNames, nil
+}
+
+// getRecords は指定されたシート名とExcelファイルからUsageRecordのスライスを取得します。
+// シートの8行以降でB列に値がある全行を処理し、UsageRecordに格納します。
+// エラーが発生した場合はエラーを返します。
+func getRecords(sheetName string, f *excelize.File) (records []UsageRecord, err error) {
 	fmt.Println(sheetName)
 
 	rows, err := f.GetRows(sheetName)
 	if err != nil {
-		return nil, fmt.Errorf("get rows: %w", err)
+		return nil, fmt.Errorf("no rows: %w", err)
 	}
 
 	parseDate := func(dateStr string) (time.Time, error) {

@@ -16,6 +16,7 @@ func main() {
 	// API
 	http.HandleFunc("/api/records", web.GetRecordsHandler)
 	http.HandleFunc("/api/files", web.GetFilesHandler)
+	http.HandleFunc("/api/sheets", web.GetSheetsHandler)
 
 	// ルートで静的ファイルを扱う（index.htmlが自動で提供される）
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {

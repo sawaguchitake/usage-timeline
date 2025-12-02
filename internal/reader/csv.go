@@ -8,7 +8,7 @@ import (
 )
 
 // FromCSV は指定されたCSVファイルから機器使用記録を読み込み、UsageRecordのスライスを返します。
-func FromCSV(filename string) (records []UsageRecord, err error) {
+func FromCSV(filename string, _ Options) (records []UsageRecord, err error) {
 	file, err := os.Open(filename)
 	if err != nil {
 		return nil, err

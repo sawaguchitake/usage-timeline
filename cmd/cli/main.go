@@ -5,8 +5,10 @@ import (
 	"log"
 	"os"
 	"strings"
+	"path/filepath"
 
 	"github.com/sawaguchitake/usage-timeline/internal/utils"
+	"github.com/sawaguchitake/usage-timeline/internal/reader"
 )
 
 var (
@@ -18,11 +20,21 @@ var (
 
 func main() {
 	file := "usage.csv"
+	sheet := ""
 	if len(os.Args) > 1 {
 		file = os.Args[1]
 	}
+	if len(os.Args) > 2 {
+		sheet = os.Args[2]
+	}
 
-	records, err := utils.ReadRecord(file)
+	var records []reader.UsageRecord
+	var err error
+	if sheet != "" && strings.ToLower(filepath.Ext(file)) == ".xlsx" {
+		records, err = utils.ReadRecord(file, reader.Options{SheetName: sheet})
+	} else {
+		records, err = utils.ReadRecord(file)
+	}
 	if err != nil {
 		log.Fatalf("Error: %v", err)
 	}
