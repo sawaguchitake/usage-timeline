@@ -9,6 +9,35 @@ async function loadFiles() {
             option.textContent = file;
             selector.appendChild(option);
         });
+        // When files loaded, also wire change event to fetch sheets for xlsx
+        selector.addEventListener('change', async () => {
+            const file = selector.value;
+            const sheetSelector = document.getElementById('sheetSelector');
+            sheetSelector.innerHTML = '';
+            if (file && file.toLowerCase().endsWith('.xlsx')) {
+                try {
+                    const resp = await fetch('/api/sheets?file=' + encodeURIComponent(file));
+                    if (!resp.ok) throw new Error('failed to fetch sheets');
+                    const data = await resp.json();
+                    const defaultOption = document.createElement('option');
+                    defaultOption.value = '';
+                    defaultOption.textContent = 'All Sheets (default)';
+                    sheetSelector.appendChild(defaultOption);
+                    data.sheets.forEach(s => {
+                        const o = document.createElement('option');
+                        o.value = s;
+                        o.textContent = s;
+                        sheetSelector.appendChild(o);
+                    });
+                    sheetSelector.style.display = '';
+                } catch (err) {
+                    console.error('Error loading sheets:', err);
+                    sheetSelector.style.display = 'none';
+                }
+            } else {
+                sheetSelector.style.display = 'none';
+            }
+        });
     } catch (error) {
         console.error('Error loading files:', error);
     }
@@ -16,11 +45,14 @@ async function loadFiles() {
 
 async function loadData() {
     const selector = document.getElementById('fileSelector');
+    const sheetSelector = document.getElementById('sheetSelector');
     const file = selector.value;
+    const sheet = sheetSelector ? sheetSelector.value : '';
     let url = '/api/records';
-    if (file) {
-        url += '?file=' + encodeURIComponent(file);
-    }
+    const params = [];
+    if (file) params.push('file=' + encodeURIComponent(file));
+    if (sheet) params.push('sheet=' + encodeURIComponent(sheet));
+    if (params.length) url += '?' + params.join('&');
     try {
         const response = await fetch(url);
         const records = await response.json();
@@ -32,6 +64,7 @@ async function loadData() {
 
 document.addEventListener('DOMContentLoaded', loadFiles);
 document.getElementById('fileSelector').addEventListener('change', loadData);
+document.getElementById('sheetSelector').addEventListener('change', loadData);
 
 function displayGantt(records) {
     // Sort records like CLI

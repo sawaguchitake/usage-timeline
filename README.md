@@ -48,3 +48,12 @@ docker-compose up --build
 4. "Load Data"ボタンをクリックしてデータを表示
 
 データは `_works` ディレクトリ内のCSV/Excelファイルを読み込みます。
+
+### Excel シート選択対応
+Web UI と API は `.xlsx` ファイルの特定シートを選択して読み込むことができます。
+
+CLI では第2引数にシート名を指定できます（`.xlsx` のみ有効）。
+
+```
+go run ./cmd/cli my.xlsx "Sheet1"
+```
