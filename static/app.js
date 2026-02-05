@@ -66,6 +66,54 @@ document.addEventListener('DOMContentLoaded', loadFiles);
 document.getElementById('fileSelector').addEventListener('change', loadData);
 document.getElementById('sheetSelector').addEventListener('change', loadData);
 
+// CSVダウンロードボタンのイベント
+// CSVダウンロードボタンのイベント（クライアント側テーブルをCSV化）
+const downloadButton = document.getElementById('downloadCsv');
+if (downloadButton) {
+    downloadButton.addEventListener('click', () => {
+        const gantt = document.getElementById('gantt');
+        if (!gantt) return;
+        const table = gantt.querySelector('table');
+        if (!table) return;
+
+        const rows = Array.from(table.rows);
+        const csvLines = rows.map(row => {
+            const cells = Array.from(row.cells).map(cell => {
+                let text = cell.textContent || '';
+                text = text.replace(/\u00A0/g, ' ').trim();
+                if (text.includes('"')) text = text.replace(/"/g, '""');
+                if (text.includes(',') || text.includes('"') || text.includes('\n')) {
+                    return `"${text}"`;
+                }
+                return text;
+            });
+            return cells.join(',');
+        });
+
+        const csvContent = csvLines.join('\r\n');
+
+        // ファイル名に選択中の file/sheet を反映（存在する場合）
+        const selector = document.getElementById('fileSelector');
+        const sheetSelector = document.getElementById('sheetSelector');
+        const file = selector ? selector.value : '';
+        const sheet = sheetSelector ? sheetSelector.value : '';
+        const fnameParts = ['usage'];
+        if (file) fnameParts.push(file.replace(/[^a-z0-9_\-\.]/gi, '_'));
+        if (sheet) fnameParts.push(sheet.replace(/[^a-z0-9_\-\.]/gi, '_'));
+        const filename = fnameParts.join('_') + '.csv';
+
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    });
+}
+
 function displayGantt(records) {
     // Sort records like CLI
     records.sort((a, b) => {
