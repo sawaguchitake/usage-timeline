@@ -99,6 +99,14 @@ func getRecords(sheetName string, f *excelize.File) (records []UsageRecord, err 
 			if err != nil {
 				return nil, fmt.Errorf("parse end date on row %d: %w", i+8, err)
 			}
+			targetUser := ""
+			if len(row) > 5 {
+				targetUser = row[5]
+			}
+			purpose := ""
+			if len(row) > 6 {
+				purpose = row[6]
+			}
 			notes := ""
 			if len(row) > 7 {
 				notes = row[7]
@@ -109,8 +117,8 @@ func getRecords(sheetName string, f *excelize.File) (records []UsageRecord, err 
 				User:        row[2],
 				BeginDate:   startDate,
 				EndDate:     endDate,
-				TargetUser:  row[5],
-				Purpose:     row[6],
+				TargetUser:  targetUser,
+				Purpose:     purpose,
 				Notes:       notes,
 			}
 			records = append(records, record)
