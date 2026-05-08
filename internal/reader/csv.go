@@ -4,7 +4,6 @@ import (
 	"encoding/csv"
 	"fmt"
 	"os"
-	"time"
 )
 
 // FromCSV は指定されたCSVファイルから機器使用記録を読み込み、UsageRecordのスライスを返します。
@@ -25,13 +24,19 @@ func FromCSV(filename string, _ Options) (records []UsageRecord, err error) {
 		if i == 0 {
 			continue // ヘッダー行（id,user_name,begin_date,end_date）をスキップ
 		}
-		begin := parseDateFlexible(row[2])
-		if begin.IsZero() {
-			return nil, fmt.Errorf("invalid begin date: %s", row[2])
+		begin, err := fromMultiFormatDate(row[2])
+		if err != nil {
+			return nil, fmt.Errorf("invalid begin date on row %d: %w", i+1, err)
 		}
-		end := parseDateFlexible(row[3]) // 終了日は空欄許容
+		end, err := fromMultiFormatDate(row[3]) // 終了日は空欄許容
+		if err != nil {
+			return nil, fmt.Errorf("invalid end date on row %d: %w", i+1, err)
+		}
+		if !validateDatePeriod(begin, end) {
+			return nil, fmt.Errorf("invalid date period on row %d: begin=%v, end=%v", i+1, toDateString(begin), toDateString(end))
+		}
 		records = append(records, UsageRecord{
-			No:          i,
+			No:          i + 1,
 			EquipmentID: row[0],
 			User:        row[1],
 			BeginDate:   begin,
@@ -39,22 +44,4 @@ func FromCSV(filename string, _ Options) (records []UsageRecord, err error) {
 		})
 	}
 	return records, nil
-}
-
-// 1桁月・日にも対応した日付パース関数
-func parseDateFlexible(s string) time.Time {
-	if s == "" {
-		return time.Time{}
-	}
-
-	layouts := []string{"2006-1-2", "2006-01-02", "2006/1/2", "2006/01/02"}
-	var t time.Time
-	var err error
-	for _, layout := range layouts {
-		t, err = time.Parse(layout, s)
-		if err == nil {
-			return t
-		}
-	}
-	return time.Time{}
 }

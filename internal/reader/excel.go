@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"sort"
-	"time"
 
 	"github.com/xuri/excelize/v2"
 )
@@ -17,7 +16,6 @@ import (
 func FromExcel(filename string, options Options) ([]UsageRecord, error) {
 	file, err := os.Open(filename)
 	if err != nil {
-		fmt.Println("ファイルを開けません:", err)
 		return nil, err
 	}
 	defer file.Close()
@@ -81,34 +79,19 @@ func getRecords(sheetName string, f *excelize.File) (records []UsageRecord, err 
 		return nil, fmt.Errorf("no rows: %w", err)
 	}
 
-	parseDate := func(dateStr string) (time.Time, error) {
-		if dateStr == "" {
-			return time.Time{}, nil
-		}
-		return time.Parse("01-02-06", dateStr)
-	}
-	extractDate := func(date time.Time) string {
-		if date.IsZero() {
-			return ""
-		}
-		return date.Format("2006-01-02")
-	}
-
 	// 8行以降でB列に値がある全行を出力
 	for i, row := range rows[7:] {
 		if len(row) > 1 && row[1] != "" {
-			startDate, err := parseDate(row[3])
+			beginDate, err := fromExcelDate(row[3])
 			if err != nil {
-				return nil, fmt.Errorf("parse start date on row %d: %w", i+8, err)
+				return nil, fmt.Errorf("invalid begin date on row %d: %w", i+8, err)
 			}
-			endDate, err := parseDate(row[4])
+			endDate, err := fromExcelDate(row[4])
 			if err != nil {
-				return nil, fmt.Errorf("parse end date on row %d: %w", i+8, err)
+				return nil, fmt.Errorf("invalid end date on row %d: %w", i+8, err)
 			}
-			if startDate != (time.Time{}) && endDate != (time.Time{}) {
-				if startDate.After(endDate) || startDate.Local().Year() != endDate.Local().Year() || startDate.Local().Month() != endDate.Local().Month() {
-					return nil, fmt.Errorf("start date and end date must be in the same year and month on row %d: start=%v, end=%v", i+8, extractDate(startDate), extractDate(endDate))
-				}
+			if !validateDatePeriod(beginDate, endDate) {
+				return nil, fmt.Errorf("invalid date period on row %d: begin=%v, end=%v", i+8, toDateString(beginDate), toDateString(endDate))
 			}
 			targetUser := ""
 			if len(row) > 5 {
@@ -126,7 +109,7 @@ func getRecords(sheetName string, f *excelize.File) (records []UsageRecord, err 
 				No:          i + 8,
 				EquipmentID: row[1],
 				User:        row[2],
-				BeginDate:   startDate,
+				BeginDate:   beginDate,
 				EndDate:     endDate,
 				TargetUser:  targetUser,
 				Purpose:     purpose,
