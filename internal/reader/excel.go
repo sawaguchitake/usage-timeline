@@ -87,6 +87,12 @@ func getRecords(sheetName string, f *excelize.File) (records []UsageRecord, err 
 		}
 		return time.Parse("01-02-06", dateStr)
 	}
+	extractDate := func(date time.Time) string {
+		if date.IsZero() {
+			return ""
+		}
+		return date.Format("2006-01-02")
+	}
 
 	// 8行以降でB列に値がある全行を出力
 	for i, row := range rows[7:] {
@@ -98,6 +104,11 @@ func getRecords(sheetName string, f *excelize.File) (records []UsageRecord, err 
 			endDate, err := parseDate(row[4])
 			if err != nil {
 				return nil, fmt.Errorf("parse end date on row %d: %w", i+8, err)
+			}
+			if startDate != (time.Time{}) && endDate != (time.Time{}) {
+				if startDate.After(endDate) || startDate.Local().Year() != endDate.Local().Year() || startDate.Local().Month() != endDate.Local().Month() {
+					return nil, fmt.Errorf("start date and end date must be in the same year and month on row %d: start=%v, end=%v", i+8, extractDate(startDate), extractDate(endDate))
+				}
 			}
 			targetUser := ""
 			if len(row) > 5 {
