@@ -72,52 +72,52 @@ func GetSheetList(filename string) ([]string, error) {
 // シートの8行以降でB列に値がある全行を処理し、UsageRecordに格納します。
 // エラーが発生した場合はエラーを返します。
 func getRecords(sheetName string, f *excelize.File) (records []UsageRecord, err error) {
-	fmt.Println(sheetName)
-
 	rows, err := f.GetRows(sheetName)
 	if err != nil {
 		return nil, fmt.Errorf("no rows: %w", err)
 	}
 
+	// 明細は8行目以降。それより行数が少ないシートは明細なしとして扱う。
+	if len(rows) <= 7 {
+		return nil, nil
+	}
+
 	// 8行以降でB列に値がある全行を出力
 	for i, row := range rows[7:] {
-		if len(row) > 1 && row[1] != "" {
-			beginDate, err := fromExcelDate(row[3])
+		if cell(row, 1) != "" {
+			beginDate, err := fromExcelDate(cell(row, 3))
 			if err != nil {
 				return nil, fmt.Errorf("invalid begin date on row %d: %w", i+8, err)
 			}
-			endDate, err := fromExcelDate(row[4])
+			endDate, err := fromExcelDate(cell(row, 4))
 			if err != nil {
 				return nil, fmt.Errorf("invalid end date on row %d: %w", i+8, err)
 			}
 			if !validateDatePeriod(beginDate, endDate) {
 				return nil, fmt.Errorf("invalid date period on row %d: begin=%v, end=%v", i+8, toDateString(beginDate), toDateString(endDate))
 			}
-			targetUser := ""
-			if len(row) > 5 {
-				targetUser = row[5]
-			}
-			purpose := ""
-			if len(row) > 6 {
-				purpose = row[6]
-			}
-			notes := ""
-			if len(row) > 7 {
-				notes = row[7]
-			}
 			record := UsageRecord{
 				No:          i + 8,
-				EquipmentID: row[1],
-				User:        row[2],
+				EquipmentID: cell(row, 1),
+				User:        cell(row, 2),
 				BeginDate:   beginDate,
 				EndDate:     endDate,
-				TargetUser:  targetUser,
-				Purpose:     purpose,
-				Notes:       notes,
+				TargetUser:  cell(row, 5),
+				Purpose:     cell(row, 6),
+				Notes:       cell(row, 7),
 			}
 			records = append(records, record)
 		}
 	}
 
 	return records, nil
+}
+
+// cell は row の index 位置のセル値を返す。範囲外は空文字を返す。
+// excelize の GetRows は行末の空セルを切り詰めるため、列アクセスは必ずこれを経由する。
+func cell(row []string, i int) string {
+	if i < len(row) {
+		return row[i]
+	}
+	return ""
 }
